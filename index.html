@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Management System</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+<style>
+body{font-family:Arial}
+</style>
+</head>
+
+<body>
+
+<div id="root"></div>
+
+<script type="text/babel">
+
+const {useState,useEffect}=React
+
+const initialStudents=[
+{id:1,name:"Alice Johnson",email:"alice@example.com",age:20},
+{id:2,name:"Bob Smith",email:"bob@test.com",age:22},
+{id:3,name:"Charlie Brown",email:"charlie@demo.net",age:21},
+{id:4,name:"Manjunath K T",email:"manju@dem.net",age:20},
+{id:5,name:"Mattie",email:"mattie@gmail.com",age:21}
+]
+
+function App(){
+
+const[students,setStudents]=useState([])
+const[loading,setLoading]=useState(true)
+
+const[formData,setFormData]=useState({name:"",email:"",age:""})
+const[currentStudent,setCurrentStudent]=useState(null)
+
+const[showForm,setShowForm]=useState(false)
+const[deleteId,setDeleteId]=useState(null)
+
+const[errors,setErrors]=useState({})
+
+useEffect(()=>{
+setTimeout(()=>{
+setStudents(initialStudents)
+setLoading(false)
+},1200)
+},[])
+
+function validate(){
+
+let err={}
+
+if(!formData.name.trim())
+err.name="Name required"
+
+if(!formData.email.trim())
+err.email="Email required"
+else if(!/\S+@\S+\.\S+/.test(formData.email))
+err.email="Invalid email"
+
+if(!formData.age)
+err.age="Age required"
+
+setErrors(err)
+
+return Object.keys(err).length===0
+}
+
+function handleChange(e){
+
+const{name,value}=e.target
+
+setFormData({
+...formData,
+[name]:value
+})
+}
+
+function handleSubmit(e){
+
+e.preventDefault()
+
+if(!validate())return
+
+if(currentStudent){
+
+setStudents(
+students.map(s=>
+s.id===currentStudent.id
+?{...formData,id:s.id}
+:s
+)
+)
+
+}else{
+
+setStudents([
+...students,
+{...formData,id:Date.now()}
+])
+
+}
+
+setShowForm(false)
+
+setFormData({name:"",email:"",age:""})
+setCurrentStudent(null)
+}
+
+function editStudent(s){
+
+setCurrentStudent(s)
+
+setFormData({
+name:s.name,
+email:s.email,
+age:s.age
+})
+
+setShowForm(true)
+}
+
+function deleteStudent(){
+
+setStudents(
+students.filter(s=>s.id!==deleteId)
+)
+
+setDeleteId(null)
+}
+
+function exportExcel(){
+
+const ws=XLSX.utils.json_to_sheet(students)
+
+const wb=XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(wb,ws,"Students")
+
+XLSX.writeFile(wb,"students.xlsx")
+
+}
+
+if(loading){
+
+return(
+<div className="flex justify-center items-center h-screen text-xl">
+Loading students...
+</div>
+)
+
+}
+
+return(
+
+<div className="p-8 bg-gray-100 min-h-screen">
+
+<div className="max-w-4xl mx-auto bg-white p-6 rounded shadow">
+
+<div className="flex justify-between mb-4">
+
+<h1 className="text-2xl font-bold">Student Management</h1>
+
+<div className="space-x-2">
+
+<button
+onClick={exportExcel}
+className="bg-green-600 text-white px-3 py-1 rounded">
+Export Excel
+</button>
+
+<button
+onClick={()=>setShowForm(true)}
+className="bg-blue-600 text-white px-3 py-1 rounded">
+Add Student
+</button>
+
+</div>
+
+</div>
+
+<table className="w-full border">
+
+<thead className="bg-gray-200">
+
+<tr>
+
+<th className="p-2">Name</th>
+<th>Email</th>
+<th>Age</th>
+<th>Actions</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{students.map(s=>(
+
+<tr key={s.id} className="border-t text-center">
+
+<td className="p-2">{s.name}</td>
+<td>{s.email}</td>
+<td>{s.age}</td>
+
+<td className="space-x-2">
+
+<button
+onClick={()=>editStudent(s)}
+className="bg-yellow-400 px-2 py-1 rounded">
+Edit
+</button>
+
+<button
+onClick={()=>setDeleteId(s.id)}
+className="bg-red-500 text-white px-2 py-1 rounded">
+Delete
+</button>
+
+</td>
+
+</tr>
+
+))}
+
+</tbody>
+
+</table>
+
+</div>
+
+{/* FORM MODAL */}
+
+{showForm&&(
+
+<div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+
+<div className="bg-white p-6 rounded w-80">
+
+<h2 className="text-lg font-bold mb-3">
+{currentStudent?"Edit Student":"Add Student"}
+</h2>
+
+<form onSubmit={handleSubmit}>
+
+<input
+name="name"
+placeholder="Name"
+value={formData.name}
+onChange={handleChange}
+className="border p-2 w-full mb-2"
+/>
+<p className="text-red-500 text-sm">{errors.name}</p>
+
+<input
+name="email"
+placeholder="Email"
+value={formData.email}
+onChange={handleChange}
+className="border p-2 w-full mb-2"
+/>
+<p className="text-red-500 text-sm">{errors.email}</p>
+
+<input
+name="age"
+type="number"
+placeholder="Age"
+value={formData.age}
+onChange={handleChange}
+className="border p-2 w-full mb-2"
+/>
+<p className="text-red-500 text-sm">{errors.age}</p>
+
+<div className="flex justify-end gap-2">
+
+<button
+type="button"
+onClick={()=>setShowForm(false)}
+className="bg-gray-300 px-3 py-1 rounded">
+Cancel
+</button>
+
+<button
+type="submit"
+className="bg-blue-600 text-white px-3 py-1 rounded">
+Save
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+)}
+
+{/* DELETE CONFIRM */}
+
+{deleteId&&(
+
+<div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+
+<div className="bg-white p-6 rounded text-center">
+
+<p className="mb-4">Delete this student?</p>
+
+<div className="space-x-3">
+
+<button
+onClick={()=>setDeleteId(null)}
+className="bg-gray-300 px-3 py-1 rounded">
+Cancel
+</button>
+
+<button
+onClick={deleteStudent}
+className="bg-red-600 text-white px-3 py-1 rounded">
+Delete
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+)}
+
+</div>
+
+)
+
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>)
+
+</script>
+
+</body>
+</html>
